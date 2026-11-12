@@ -1,0 +1,44 @@
+---
+- name: Deploy the project webpage
+  hosts: localhost
+  connection: local
+  become: true
+
+  tasks:
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Deploy the webpage
+      ansible.builtin.copy:
+        src: index.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Start Nginx and enable it at boot
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Check the deployed webpage
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        status_code: 200
+        return_content: true
+      register: webpage
+      until: webpage.status == 200
+      retries: 5
+      delay: 2
+
+    - name: Verify the webpage content
+      ansible.builtin.assert:
+        that:
+          - "'Jenkins and Ansible Deployment Project' in webpage.content"
+          - "'Created by Yugii' in webpage.content"
+        success_msg: "The deployed webpage is working."
